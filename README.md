@@ -1,4 +1,3 @@
-"""
 Cache Simulator: Multi-threaded with and without Cache Coherence
 =================================================================
 
