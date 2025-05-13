@@ -2,29 +2,47 @@
 Cache Simulator: Multi-threaded with and without Cache Coherence
 =================================================================
 
-Simulasi ini bertujuan untuk mengeksplorasi peran protokol koherensi cache dalam sistem multiprosesor 
-dengan dua core/thread. Dalam sistem multi-core modern, masing-masing core memiliki cache lokal 
-yang menyimpan salinan data dari memori utama. Namun, tantangan utama muncul ketika dua core mengakses 
-dan memodifikasi data yang sama — hal ini dapat menyebabkan inkonsistensi tanpa adanya mekanisme 
-koherensi cache.
+Simulasi ini dirancang untuk memodelkan bagaimana dua core/thread mengakses 
+dan memodifikasi data bersama dalam sistem multi-core, baik dengan maupun 
+tanpa protokol koherensi cache. Dalam sistem nyata, cache koherensi sangat 
+penting agar semua core memiliki pandangan konsisten terhadap data yang sama. 
+Tanpa koherensi, inkonsistensi dapat terjadi jika satu core memperbarui nilai 
+yang tidak disadari oleh core lain.
 
-Simulator ini membandingkan dua pendekatan:
-1. **Tanpa koherensi cache** — setiap core membaca dan menulis dari cache lokal tanpa sinkronisasi.
-2. **Dengan protokol koherensi sederhana (MESI-like)** — setiap perubahan nilai memicu invalidasi 
-   cache core lain untuk menjaga konsistensi data antar core.
+Program ini menggunakan dua thread yang masing-masing memiliki cache lokal. 
+Saat koherensi diaktifkan (mode MESI-like), simulator akan mengirimkan sinyal 
+invalidasi ke cache thread lain saat data ditulis. Jika tidak diaktifkan, 
+maka core bebas membaca dan menulis ke cache lokal tanpa pemberitahuan.
 
-Setiap core melakukan serangkaian operasi acak (read/write) terhadap data bersama dalam 1000 iterasi. 
-Simulator mencatat metrik seperti waktu eksekusi, jumlah akses ke memori utama, dan jumlah pesan 
-invalidasi antar cache. Tujuan akhirnya adalah menunjukkan bahwa meskipun penggunaan protokol 
-koherensi dapat menurunkan performa secara waktu karena sinkronisasi, ia memberikan hasil yang 
-konsisten dan benar secara semantik — sesuatu yang penting dalam sistem nyata.
+Tujuan utama dari simulasi ini adalah membandingkan:
+- Performa waktu eksekusi antara dua mode
+- Jumlah akses ke memori utama (sebagai indikator traffic)
+- Jumlah pesan invalidasi cache
 
-Simulasi ini juga dapat digunakan untuk memahami dasar dari protokol cache seperti MESI, MOESI, 
-dan MSI dengan menambahkan status tambahan atau memperluas mekanismenya. Cocok untuk pembelajaran 
-arsitektur komputer, paralelisme, dan sistem embedded.
+Dengan begitu, kita bisa melihat trade-off nyata antara kecepatan dan konsistensi 
+dalam sistem multiprosesor modern.
 
-Cara menjalankan:
+Cara Menjalankan:
 $ python cache_simulator.py
+
+Contoh Output:
+Simulasi tanpa protokol koherensi:
+  Waktu: 0.0123 detik
+  Akses Memori: 1142
+  Invalidasi: 0
+
+Simulasi dengan protokol koherensi:
+  Waktu: 0.0157 detik
+  Akses Memori: 1032
+  Invalidasi: 184
+
+Analisis:
+| Aspek               | Tanpa Koherensi    | Dengan Koherensi     |
+|--------------------|--------------------|-----------------------|
+| Akurasi Data       | Tidak konsisten    | Konsisten             |
+| Waktu Eksekusi     | Lebih cepat        | Sedikit lebih lambat  |
+| Traffic Memori     | Lebih tinggi       | Lebih efisien         |
+| Invalidasi Cache   | Tidak ada          | Ada                   |
 """
 
 import threading
@@ -75,12 +93,11 @@ class CacheSimulator:
                 cache.value = self.memory.value
                 if self.use_coherence:
                     cache.state = "S"
-                    # Tandai cache lawan juga shared jika valid
                     other_cache = self.caches[1 - core_id]
                     if other_cache.state != "I":
                         other_cache.state = "S"
                 else:
-                    cache.state = "V"  # Valid (untuk simulasi tanpa koherensi)
+                    cache.state = "V"  # Valid (tanpa koherensi)
         return cache.value
 
     def write(self, core_id, value):
@@ -104,8 +121,7 @@ class CacheSimulator:
 
     def run_thread(self, core_id):
         """
-        Fungsi utama yang dijalankan oleh tiap thread/core.
-        Melakukan 1000 operasi acak (read/write).
+        Fungsi utama untuk setiap core/thread, melakukan 1000 operasi acak.
         """
         for _ in range(1000):
             if random.random() < 0.5:
@@ -115,7 +131,7 @@ class CacheSimulator:
 
     def run_simulation(self):
         """
-        Menjalankan dua thread dan mengukur waktu total eksekusi.
+        Menjalankan simulasi dengan dua thread dan mengukur waktu eksekusi.
         """
         t0 = time.time()
         threads = []
@@ -131,9 +147,9 @@ class CacheSimulator:
 
 def compare():
     """
-    Membandingkan dua simulasi:
+    Membandingkan dua skenario:
     1. Tanpa koherensi cache
-    2. Dengan protokol koherensi (MESI-like)
+    2. Dengan protokol koherensi (mirip MESI)
     """
     print("Simulasi tanpa protokol koherensi:")
     sim_no = CacheSimulator(use_coherence=False)
