@@ -30,7 +30,7 @@ Analisis:
 | Waktu Eksekusi     | Lebih cepat        | Sedikit lebih lambat  |
 | Traffic Memori     | Lebih tinggi       | Lebih efisien         |
 | Invalidasi Cache   | Tidak ada          | Ada                   |
-"""
+
 
 import threading
 import time
