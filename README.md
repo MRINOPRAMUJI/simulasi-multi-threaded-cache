@@ -1,4 +1,3 @@
-"""
 Cache Simulator: Multi-threaded with and without Coherence
 
 Simulasi sederhana cache multi-core dengan dan tanpa protokol koherensi 
